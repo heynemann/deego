@@ -1,5 +1,7 @@
 ![deego](https://raw.github.com/heynemann/deego/master/logo.png) 
 
+[![Build Status](https://secure.travis-ci.org/heynemann/deego.png)](http://travis-ci.org/heynemann/deego)
+
 # What is deego?
 
 * deego is a vm manager for dummies (like me);
