@@ -10,4 +10,5 @@ class VM:
         vm = models.VirtualMachine(
             manager = kw.get('manager', managers.AutoVMManager)
         )
+        vm.bootstrap()
         return vm

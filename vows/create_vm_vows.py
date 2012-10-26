@@ -27,5 +27,15 @@ class CreateVMVows(Vows.Context):
     class ShouldStart(Vows.Context):
         def topic(self, vm):
             vm.start()
-            expect(vm.ip).to_equal(EXPECTED_IP)
-            expect(vm.run_command('ls /')).to_equal(EXPECTED_COMMAND_RESULT)
+            return vm
+
+        def should_have_expected_ip(self, topic):
+            expect(topic.ip).to_equal(EXPECTED_IP)
+
+        class CanRunCommand(Vows.Context):
+            def topic(self, vm):
+                return vm.run_command('ls /')
+
+            def should_have_expected_result_from_command(self, topic):
+                expect(topic).to_equal(EXPECTED_COMMAND_RESULT)
+
