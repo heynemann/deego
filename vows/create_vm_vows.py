@@ -17,7 +17,7 @@ class CreateVMVows(Vows.Context):
 
     def topic(self):
         return VM.create(
-            cpu_count=2,
+            cpu_count=1,
             ram=512, #MB
             disk_size=8000 #MB
         )
@@ -45,6 +45,13 @@ class CreateVMVows(Vows.Context):
 
             def should_have_expected_result_from_command(self, topic):
                 expect(topic['output']).to_include(EXPECTED_COMMAND_RESULT)
+
+        class HasProperNumberOfCPUs(Vows.Context):
+            def topic(self, vm):
+                return vm.run_command('cat /proc/cpuinfo | grep processor | wc -l')
+
+            def should_have_two_cpus(self, topic):
+                expect(topic['output']).to_include({'message': u'1', 'type': 'out'})
 
         class WhenSnapshottedAndReverted(Vows.Context):
             def topic(self, vm):

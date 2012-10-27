@@ -61,6 +61,8 @@ class LXCManager(VMManager):
                 mac=self.vm.mac_address,
                 cpu_count=self.vm.cpu_count,
                 ram=self.vm.ram,
+                swap_size=self.vm.disk_size * 0.01, # 1% of hard disk for swap
+                min_guarantee=self.vm.ram * 0.8, # 80% of ram guaranteed
                 disk_size=self.vm.disk_size,
                 lxc_root=self.lxc_root
             )
@@ -73,7 +75,6 @@ class LXCManager(VMManager):
             self.out(line)
 
         domain_definition = self.get_definition()
-        import ipdb;ipdb.set_trace()
         self.domain = self.connection.defineXML(domain_definition)
         self.domain.create()
 
