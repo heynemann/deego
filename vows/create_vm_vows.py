@@ -6,14 +6,7 @@ from pyvows import Vows, expect
 from deego import VM, VirtualMachine, AutoVMManager
 
 EXPECTED_IP = '192.168.122'
-EXPECTED_COMMAND_RESULT = {
-    'output':[
-        { "message": 'echo "it works"', "type": "cmd"},
-        { "message": "it works", "type": "out" }
-    ],
-    'error': None,
-    'status': 0
-}
+EXPECTED_COMMAND_RESULT = { "message": 'echo "it works"', "type": "cmd"},
 
 @Vows.batch
 class CreateVMVows(Vows.Context):
@@ -48,8 +41,11 @@ class CreateVMVows(Vows.Context):
             def topic(self, vm):
                 return vm.run_command('echo "it works"')
 
+            def should_have_expected_status_code(self, topic):
+                expect(topic['status']).to_equal(0)
+
             def should_have_expected_result_from_command(self, topic):
-                expect(topic).to_be_like(EXPECTED_COMMAND_RESULT)
+                expect(topic['output']).to_include(EXPECTED_COMMAND_RESULT)
 
         class WhenSnapshottedAndReverted(Vows.Context):
             def topic(self, vm):
