@@ -4,7 +4,7 @@ python:
   - "2.7"
 
 install:
-    - cat apt-packages | xargs sudo aptitude install
+    - cat apt-packages | xargs sudo aptitude install -y
 
     # weird travis-ci python paths
     - export PYTHONPATH=$PYTHONPATH:/usr/lib/pymodules/python2.7/
