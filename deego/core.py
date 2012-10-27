@@ -11,7 +11,7 @@ class VM:
             raise ValueError("The mac address for the machine is required to create it")
 
         vm = models.VirtualMachine(
-            manager = kw.get('manager', managers.AutoVMManager),
+            manager = kw.get('manager', managers.auto.AutoVMManager),
             mac_address = kw['mac_address']
         )
         vm.bootstrap()

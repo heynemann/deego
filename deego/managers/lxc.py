@@ -2,67 +2,18 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
 from os.path import exists
 import re
-import time
 
 import libvirt
-from sh import lxc_create, lxc_stop, lxc_destroy, lxc_list, lxc_clone, ssh, ping, arp
+from sh import lxc_create, lxc_stop, lxc_destroy, lxc_list, lxc_clone, \
+               lxc_backup, lxc_restore, ssh, arp, ping
 
 from deego.models import VirtualMachine
+from deego.managers import VMManager
 
-class VMManager(object):
-    def __init__(self, ip_tries=60, sleep_time=0.5):
-        self.vm = None
-        self.ip_tries = ip_tries
-        self.sleep_time = sleep_time
-
-    def store_vm(self, vm):
-        self.vm = vm
-
-    def cmd(self, msg):
-        return self.vm.cmd(msg)
-
-    def out(self, msg):
-        return self.vm.out(msg)
-
-    def bootstrap(self):
-        pass
-
-    def create(self):
-        pass
-
-    def start(self):
-        pass
-
-    def destroy(self):
-        pass
-
-    def run_command(self, command):
-        pass
-
-    def list(self):
-        pass
-
-    def get_ip(self):
-        return None
-
-    def wait(self):
-        self.cmd('waiting for the vm to boot...')
-        for ip_try in range(self.ip_tries):
-            ip = self.get_ip()
-            if ip is not None:
-                self.vm.ip = ip
-                self.cmd('vm booted and ready')
-                return
-            time.sleep(self.sleep_time)
-
-        raise RuntimeError(
-            'Machine {0} did not respond in a timely fashion after {1} seconds'.format(
-                self.vm.name, self.ip_tries * self.sleep_time
-            )
-        )
-
+sys.stdout = os.fdopen(sys.stdout.fileno(), "wb", 0)
 
 class LXCManager(VMManager):
     def __init__(self, *args, **kw):
@@ -76,7 +27,10 @@ class LXCManager(VMManager):
         self.lxc_stop = lxc_stop.bake(_tty_in=True, _tty_out=True, _err_to_out=True, _iter=True)
         self.lxc_destroy = lxc_destroy.bake(_tty_in=True, _tty_out=True, _err_to_out=True, _iter=True)
         self.lxc_list = lxc_list.bake(_tty_in=True, _tty_out=True, _err_to_out=True, _iter=True)
+        self.lxc_backup = lxc_backup.bake(_tty_in=True, _tty_out=True, _err_to_out=True, _iter=True)
+        self.lxc_restore = lxc_restore.bake(_tty_in=True, _tty_out=True, _err_to_out=True, _iter=True)
         self.arp = arp.bake("-an", _tty_in=True, _tty_out=True, _err_to_out=True, _iter=True)
+        self.ping_cmd = ping.bake(_tty_in=True, _tty_out=True, _err_to_out=True)
 
     @classmethod
     def validate(self):
@@ -107,10 +61,10 @@ class LXCManager(VMManager):
             }
 
     def create(self):
-        create_cmd = 'lxc-clone -o {0} -n {1}'.format(self.bootstrap_name, self.vm.name)
+        create_cmd = 'lxc-clone -o {0} -n {1} -s'.format(self.bootstrap_name, self.vm.name)
         self.cmd(create_cmd)
 
-        for line in self.lxc_clone(o=self.bootstrap_name, n=self.vm.name):
+        for line in self.lxc_clone(o=self.bootstrap_name, n=self.vm.name, s=True):
             self.out(line)
 
         self.domain = self.connection.defineXML(self.get_definition())
@@ -123,7 +77,7 @@ class LXCManager(VMManager):
             pass
 
         if hasattr(self, 'domain') and self.domain:
-            self.cmd('Destroying domain...')
+            self.cmd('virsh destroy {0}'.format(self.vm.name))
             self.domain.undefine()
             self.domain.destroy()
 
@@ -149,51 +103,77 @@ class LXCManager(VMManager):
             if self.vm.mac_address in ip:
                 match = re.match(r'.*\((?P<ip>(?:\d+[.]?)+)\).*', ip)
                 if not match:
-                    return None
+                    continue
                 return match.groupdict()['ip']
+        return None
+
+    def ping(self):
+        try:
+            self.ping_cmd("-c", "1", self.vm.ip)
+            return True
+        except:
+            return False
 
     def start(self):
         pass
 
-    def run_command(self, command):
-        pass
+    def run_command(self, command, cwd=None):
+        self.aggregated = ''
+        self.last_output = ''
+        self.vm.clear_messages()
+        status_code = 0
+        error = None
 
-class AutoVMManager(VMManager):
-    managers = [LXCManager]
+        self.cmd(command)
 
-    def __init__(self, *args, **kw):
-        super(AutoVMManager, self).__init__(*args, **kw)
+        if cwd is not None:
+            command = 'cd {0} && {1}'.format(cwd, command)
 
-        self.manager_instance = None
-        for manager in self.managers:
-            if manager.validate():
-                self.manager_instance = manager(*args, **kw)
+        try:
+            p = ssh('-t', '-o', 'UserKnownHostsFile=/dev/null', '-o',
+                    'StrictHostKeyChecking=no', 'ubuntu@%s' % self.vm.ip, command,
+                    _out=self.ssh_interact, _out_bufsize=0, _tty_in=True)
+            p.wait()
+        except Exception, err:
+            status_code = 1
+            error = err
 
-    def store_vm(self, vm):
-        self.manager_instance.store_vm(vm)
+        return {
+            'status': status_code,
+            'error': error,
+            'output': self.vm.clear_messages()
+        }
 
-    def bootstrap(self):
-        return self.manager_instance.bootstrap()
+    def is_valid_message(self, message):
+        return "Warning: Permanently added" not in message and \
+               "Connection to {0} closed.".format(self.vm.ip) not in message
 
-    def create(self):
-        return self.manager_instance.create()
+    def ssh_interact(self, char, stdin):
 
-    def start(self):
-        return self.manager_instance.start()
+        self.aggregated += char
 
-    def destroy(self):
-        return self.manager_instance.destroy()
+        if self.aggregated.endswith('password: ') or self.aggregated.endswith('password for ubuntu: '):
+            stdin.put("ubuntu\n")
 
-    def list(self):
-        return self.manager_instance.list()
+        if (char == '\n'):
+            message = self.aggregated.replace(self.last_output, '')
 
-    def run_command(self, command):
-        return self.manager_instance.run_command(command)
+            if self.is_valid_message(message):
+                self.vm.out(message)
 
-    def wait(self):
-        return self.manager_instance.wait()
+            self.last_output = self.aggregated
 
-    def get_ip(self):
-        return self.manager_instance.get_ip()
+    def snapshot(self):
+        snapshot_cmd = 'lxc-backup {0} 1'.format(self.vm.name)
+        self.cmd(snapshot_cmd)
 
+        for line in self.lxc_backup(self.vm.name, 1):
+            self.out(line)
+
+    def revert(self):
+        revert_cmd = 'lxc-restore {0} 0'.format(self.vm.name)
+        self.cmd(revert_cmd)
+
+        for line in self.lxc_restore(self.vm.name, 0):
+            self.out(line)
 
