@@ -7,8 +7,12 @@ import deego.models as models
 class VM:
     @classmethod
     def create(cls, **kw):
+        if not 'mac_address' in kw:
+            raise ValueError("The mac address for the machine is required to create it")
+
         vm = models.VirtualMachine(
-            manager = kw.get('manager', managers.AutoVMManager)
+            manager = kw.get('manager', managers.AutoVMManager),
+            mac_address = kw['mac_address']
         )
         vm.bootstrap()
         return vm
