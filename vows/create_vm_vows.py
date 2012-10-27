@@ -6,7 +6,7 @@ from pyvows import Vows, expect
 from deego import VM, VirtualMachine, AutoVMManager
 
 EXPECTED_IP = '192.168.122'
-EXPECTED_COMMAND_RESULT = { "message": 'echo "it works"', "type": "cmd"},
+EXPECTED_COMMAND_RESULT = { "message": 'it works', "type": "out"},
 
 @Vows.batch
 class CreateVMVows(Vows.Context):
