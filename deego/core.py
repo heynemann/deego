@@ -4,15 +4,22 @@
 import deego.managers as managers
 import deego.models as models
 
+MB = 1024
+
 class VM:
     @classmethod
     def create(cls, **kw):
-        if not 'mac_address' in kw:
-            raise ValueError("The mac address for the machine is required to create it")
+        ram = int(kw.get('ram', 512)) * MB
+        cpu_count = int(kw.get('cpu_count', 1))
+        disk_size = int(kw.get('disk_size', 8 * MB)) * MB
+        manager = kw.get('manager', managers.auto.AutoVMManager)
 
         vm = models.VirtualMachine(
-            manager = kw.get('manager', managers.auto.AutoVMManager),
-            mac_address = kw['mac_address']
+            cpu_count=cpu_count,
+            ram=ram,
+            disk_size=disk_size,
+            manager=manager
         )
         vm.bootstrap()
+        vm.create()
         return vm

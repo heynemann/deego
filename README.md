@@ -18,10 +18,9 @@ let's get to it.
 
     def main():
         vm = VM.create(
-            cpus=2,
+            cpu_count=2,
             ram=512, #MB
-            disk_size=8000, #MB
-            mac_address="ff:ff:ff:ff:ff:00"
+            disk_size=8000 #MB
         )
         vm.start() # this will block until VM booted
         print vm.ip
@@ -52,10 +51,9 @@ specific one:
 
     def main():
         vm = VM.create(
-            cpus=2,
+            cpu_count=2,
             ram=512,
             disk_size=8000,
-            mac_address="ff:ff:ff:ff:ff:00",
             manager=KVMManager
         )
         vm.start() # this will block until VM booted

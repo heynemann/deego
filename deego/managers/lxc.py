@@ -19,6 +19,7 @@ class LXCManager(VMManager):
     def __init__(self, *args, **kw):
         super(LXCManager, self).__init__(*args, **kw)
         self.bootstrap_name = 'bootstrap'
+        self.lxc_root = '/var/lib/lxc'
 
         self.connection = libvirt.open("lxc:///")
 
@@ -55,10 +56,14 @@ class LXCManager(VMManager):
     def get_definition(self):
         xml_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'libvirt.xml'))
         with open(xml_path, 'r') as xml:
-            return xml.read() % {
-                "name": self.vm.name,
-                "mac": self.vm.mac_address
-            }
+            return xml.read().format(
+                name=self.vm.name,
+                mac=self.vm.mac_address,
+                cpu_count=self.vm.cpu_count,
+                ram=self.vm.ram,
+                disk_size=self.vm.disk_size,
+                lxc_root=self.lxc_root
+            )
 
     def create(self):
         create_cmd = 'lxc-clone -o {0} -n {1} -s'.format(self.bootstrap_name, self.vm.name)
@@ -67,7 +72,9 @@ class LXCManager(VMManager):
         for line in self.lxc_clone(o=self.bootstrap_name, n=self.vm.name, s=True):
             self.out(line)
 
-        self.domain = self.connection.defineXML(self.get_definition())
+        domain_definition = self.get_definition()
+        import ipdb;ipdb.set_trace()
+        self.domain = self.connection.defineXML(domain_definition)
         self.domain.create()
 
     def destroy(self):

@@ -17,10 +17,9 @@ class CreateVMVows(Vows.Context):
 
     def topic(self):
         return VM.create(
-            cpus=2,
+            cpu_count=2,
             ram=512, #MB
-            disk_size=8000, #MB
-            mac_address='52:54:00:4d:2b:cd'
+            disk_size=8000 #MB
         )
 
     def should_be_vm(self, topic):
