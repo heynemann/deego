@@ -32,6 +32,11 @@ setup(
 
     packages=find_packages(),
 
+    include_package_data = True,
+    package_data = {
+        '': ['*.xml'],
+    },
+
     install_requires=[
         'colorama>=0.2.4',
         'sh>=1.0.5'
