@@ -8,7 +8,7 @@ import re
 
 import libvirt
 from sh import lxc_create, lxc_stop, lxc_destroy, lxc_list, lxc_clone, \
-               lxc_backup, lxc_restore, ssh, arp, ping
+               lxc_backup, lxc_restore, lxc_execute, ssh, arp, ping
 
 from deego.models import VirtualMachine
 from deego.managers import VMManager
@@ -30,6 +30,7 @@ class LXCManager(VMManager):
         self.lxc_list = lxc_list.bake(_tty_in=True, _tty_out=True, _err_to_out=True, _iter=True)
         self.lxc_backup = lxc_backup.bake(_tty_in=True, _tty_out=True, _err_to_out=True, _iter=True)
         self.lxc_restore = lxc_restore.bake(_tty_in=True, _tty_out=True, _err_to_out=True, _iter=True)
+        self.lxc_execute = lxc_execute.bake(_tty_in=True, _tty_out=True, _err_to_out=True, _iter=True)
         self.arp = arp.bake("-an", _tty_in=True, _tty_out=True, _err_to_out=True, _iter=True)
         self.ping_cmd = ping.bake(_tty_in=True, _tty_out=True, _err_to_out=True)
 
@@ -77,6 +78,25 @@ class LXCManager(VMManager):
         domain_definition = self.get_definition()
         self.domain = self.connection.defineXML(domain_definition)
         self.domain.create()
+
+    def set_cpu_count(self):
+        pass
+        #self.run_command('sudo apt-get install lxc -y')
+
+        #if self.vm.cpu_mask is not None:
+            #cpus = "-".join([mask for mask in self.vm.cpu_mask])
+            #exec_cmd = 'lxc-execute -n {0} -s ' \
+            #'lxc.cgroup.cpuset.cpus="{1}" /bin/bash'.format(self.vm.name, cpus)
+            #self.cmd(exec_cmd)
+
+            #for line in self.lxc_execute(
+                    #'-n',
+                    #self.vm.name,
+                    #'-s',
+                    #'lxc.cgroup.cpuset.cpus={0}'.format(cpus),
+                    #'/bin/bash'
+                #):
+                #self.out(line)
 
     def destroy(self):
         try:

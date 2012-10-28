@@ -7,12 +7,13 @@ import random
 from colorama import Fore, Style
 
 class VirtualMachine:
-    def __init__(self, manager, cpu_count=1, ram=512 * 1024, disk_size=8000 * 1024, name=None):
+    def __init__(self, manager, cpu_mask=None, cpu_count=1, ram=512 * 1024, disk_size=8000 * 1024, name=None):
         self.messages = []
         self.clear_messages()
 
         self.ip = None
         self.cpu_count = cpu_count
+        self.cpu_mask = cpu_mask
         self.ram = ram
         self.disk_size = disk_size
 
@@ -58,6 +59,7 @@ class VirtualMachine:
     def start(self):
         self.manager.start()
         self.manager.wait()
+        self.manager.set_cpu_count()
 
     def create(self):
         self.manager.create()

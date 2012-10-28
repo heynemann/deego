@@ -48,6 +48,9 @@ class VMManager(object):
     def ping(self):
         return None
 
+    def set_cpu_count(self):
+        pass
+
     def wait(self):
         self.cmd('waiting for vm network to show up...')
         for ip_try in range(self.ip_tries):
