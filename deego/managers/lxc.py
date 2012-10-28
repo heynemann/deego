@@ -5,6 +5,7 @@ import os
 import sys
 from os.path import exists
 import re
+import time
 
 import libvirt
 from sh import lxc_create, lxc_stop, lxc_destroy, lxc_list, lxc_clone, \
@@ -110,6 +111,10 @@ class LXCManager(VMManager):
             self.cmd('virsh destroy {0}'.format(self.vm.name))
             self.domain.undefine()
             self.domain.destroy()
+            time.sleep(2)
+
+        if self.vm.snapshotted:
+            self.vm.revert()
 
         if self.vm.name in self.lxc_list():
             create_cmd = 'lxc-destroy -f -n {0}'.format(self.vm.name)
@@ -200,6 +205,8 @@ class LXCManager(VMManager):
 
         for line in self.lxc_backup(self.vm.name, 1):
             self.out(line)
+
+        self.vm.snapshotted = True
 
     def revert(self):
         revert_cmd = 'lxc-restore {0} 0'.format(self.vm.name)

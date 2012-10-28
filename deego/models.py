@@ -28,6 +28,8 @@ class VirtualMachine:
         random.randint(0x00, 0xff)]
         self.mac_address = ':'.join(map(lambda x: "%02x" % x, mac))
 
+        self.snapshotted = False
+
         self.manager = manager()
         self.manager.store_vm(self)
 
