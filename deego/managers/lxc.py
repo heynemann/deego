@@ -176,7 +176,8 @@ class LXCManager(VMManager):
 
     def is_valid_message(self, message):
         return "Warning: Permanently added" not in message and \
-               "Connection to {0} closed.".format(self.vm.ip) not in message
+               "Connection to {0} closed.".format(self.vm.ip) not in message and \
+               "[sudo] password for ubuntu:" not in message
 
     def ssh_interact(self, char, stdin):
 
