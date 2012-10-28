@@ -4,5 +4,13 @@
 from deego.core import VM
 from deego.models import VirtualMachine
 from deego.managers import VMManager
-from deego.managers.auto import AutoVMManager
-from deego.managers.lxc import LXCManager
+
+try:
+    from deego.managers.auto import AutoVMManager
+except ImportError:
+    pass
+
+try:
+    from deego.managers.lxc import LXCManager
+except ImportError:
+    pass
