@@ -22,6 +22,7 @@ class LXCManager(VMManager):
         self.lxc_root = '/var/lib/lxc'
 
         self.connection = libvirt.open("lxc:///")
+        self.domain = None
 
         self.lxc_create = lxc_create.bake(_tty_in=True, _tty_out=True, _err_to_out=True, _iter=True)
         self.lxc_clone = lxc_clone.bake(_tty_in=True, _tty_out=True, _err_to_out=True, _iter=True)
@@ -99,12 +100,13 @@ class LXCManager(VMManager):
                 #self.out(line)
 
     def destroy(self):
-        try:
-            self.domain = self.connection.lookupByName(self.vm.name)
-        except:
-            pass
+        if self.domain is None:
+            try:
+                self.domain = self.connection.lookupByName(self.vm.name)
+            except:
+                pass
 
-        if hasattr(self, 'domain') and self.domain:
+        if self.domain is not None:
             self.cmd('virsh destroy {0}'.format(self.vm.name))
             self.domain.undefine()
             self.domain.destroy()
