@@ -69,8 +69,8 @@ class VirtualMachine:
     def destroy(self):
         self.manager.destroy()
 
-    def run_command(self, command):
-        return self.manager.run_command(command)
+    def run_command(self, command, cwd=None):
+        return self.manager.run_command(command, cwd=cwd)
 
     def snapshot(self):
         return self.manager.snapshot()
