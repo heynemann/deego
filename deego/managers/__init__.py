@@ -30,7 +30,7 @@ class VMManager(object):
     def destroy(self):
         pass
 
-    def run_command(self, command):
+    def run_command(self, command, cwd=None):
         pass
 
     def snapshot(self):
