@@ -7,8 +7,12 @@ import sys
 import re
 import tempfile
 
-from sh import lxc_create, lxc_start, lxc_stop, lxc_destroy, lxc_list, lxc_clone, \
-               lxc_backup, lxc_restore, lxc_execute, ssh, arp, ping
+import sh
+try:
+    from sh import lxc_create, lxc_start, lxc_stop, lxc_destroy, lxc_list, lxc_clone, \
+                   lxc_backup, lxc_restore, lxc_execute, ssh, arp, ping
+except sh.CommandNotFound:
+    pass
 
 from deego.models import VirtualMachine
 from deego.managers import VMManager
