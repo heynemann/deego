@@ -51,12 +51,15 @@ class LXCManager(VMManager):
         lxc_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'lxc.conf'))
 
         with open(lxc_path, 'r') as lxc_conf:
-            cpus = "-".join([mask for mask in self.vm.cpu_mask])
+            cpu_string = ''
+            if self.vm.cpu_mask:
+                cpus = "-".join([mask for mask in self.vm.cpu_mask])
+                cpu_string = "lxc.cgroup.cpuset.cpus={cpu_mask}".format(cpu_mask=cpus)
  
             return lxc_conf.read().format(
                 name=self.vm.name,
                 mac=self.vm.mac_address,
-                cpu_mask=cpus,
+                cpu_mask=cpu_string,
                 ram=self.vm.ram
             )
 
