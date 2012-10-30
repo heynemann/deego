@@ -2,13 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import os
+import os.path
 import sys
-from os.path import exists
 import re
-import time
+import tempfile
 
-import libvirt
-from sh import lxc_create, lxc_stop, lxc_destroy, lxc_list, lxc_clone, \
+from sh import lxc_create, lxc_start, lxc_stop, lxc_destroy, lxc_list, lxc_clone, \
                lxc_backup, lxc_restore, lxc_execute, ssh, arp, ping
 
 from deego.models import VirtualMachine
@@ -22,10 +21,8 @@ class LXCManager(VMManager):
         self.bootstrap_name = 'bootstrap'
         self.lxc_root = '/var/lib/lxc'
 
-        self.connection = libvirt.open("lxc:///")
-        self.domain = None
-
         self.lxc_create = lxc_create.bake(_tty_in=True, _tty_out=True, _err_to_out=True, _iter=True)
+        self.lxc_start = lxc_start.bake(_tty_in=True, _tty_out=True, _err_to_out=True, _iter=True)
         self.lxc_clone = lxc_clone.bake(_tty_in=True, _tty_out=True, _err_to_out=True, _iter=True)
         self.lxc_stop = lxc_stop.bake(_tty_in=True, _tty_out=True, _err_to_out=True, _iter=True)
         self.lxc_destroy = lxc_destroy.bake(_tty_in=True, _tty_out=True, _err_to_out=True, _iter=True)
@@ -47,72 +44,42 @@ class LXCManager(VMManager):
             self.cmd(create_cmd)
             arguments = ['-t', 'ubuntu', '-n', self.bootstrap_name]
 
-            root_key_path = '/root/.ssh/id_rsa.pub'
-            if exists(root_key_path):
-                arguments.append('--')
-                arguments.append('-S')
-                arguments.append(root_key_path)
-
             for line in self.lxc_create(*arguments):
                 self.out(line)
 
     def get_definition(self):
-        xml_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'libvirt.xml'))
-        with open(xml_path, 'r') as xml:
-            return xml.read().format(
+        lxc_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'lxc.conf'))
+
+        with open(lxc_path, 'r') as lxc_conf:
+            cpus = "-".join([mask for mask in self.vm.cpu_mask])
+ 
+            return lxc_conf.read().format(
                 name=self.vm.name,
                 mac=self.vm.mac_address,
-                cpu_count=self.vm.cpu_count,
-                ram=self.vm.ram,
-                swap_size=self.vm.disk_size * 0.01, # 1% of hard disk for swap
-                min_guarantee=self.vm.ram * 0.8, # 80% of ram guaranteed
-                disk_size=self.vm.disk_size,
-                lxc_root=self.lxc_root
+                cpu_mask=cpus,
+                ram=self.vm.ram
             )
 
     def create(self):
-        create_cmd = 'lxc-clone -o {0} -n {1} -s'.format(self.bootstrap_name, self.vm.name)
+        arguments = ['-t', 'ubuntu', '-n', self.vm.name]
+
+        conf_path = os.path.join(tempfile.gettempdir().rstrip('/'), '{0}.conf'.format(self.vm.name))
+        with open(conf_path, 'w') as lxc_conf:
+            lxc_conf.write(self.get_definition())
+
+        arguments.append('-f')
+        arguments.append(conf_path)
+
+        arguments.append('--fssize')
+        arguments.append('{0}G'.format(self.vm.disk_size / 1024 / 1024))
+
+        create_cmd = 'lxc-create {0}'.format(' '.join(arguments))
         self.cmd(create_cmd)
 
-        for line in self.lxc_clone(o=self.bootstrap_name, n=self.vm.name, s=True):
+        for line in self.lxc_create(*arguments):
             self.out(line)
 
-        domain_definition = self.get_definition()
-        self.domain = self.connection.defineXML(domain_definition)
-        self.domain.create()
-
-    def set_cpu_count(self):
-        pass
-        #self.run_command('sudo apt-get install lxc -y')
-
-        #if self.vm.cpu_mask is not None:
-            #cpus = "-".join([mask for mask in self.vm.cpu_mask])
-            #exec_cmd = 'lxc-execute -n {0} -s ' \
-            #'lxc.cgroup.cpuset.cpus="{1}" /bin/bash'.format(self.vm.name, cpus)
-            #self.cmd(exec_cmd)
-
-            #for line in self.lxc_execute(
-                    #'-n',
-                    #self.vm.name,
-                    #'-s',
-                    #'lxc.cgroup.cpuset.cpus={0}'.format(cpus),
-                    #'/bin/bash'
-                #):
-                #self.out(line)
-
     def destroy(self):
-        if self.domain is None:
-            try:
-                self.domain = self.connection.lookupByName(self.vm.name)
-            except:
-                pass
-
-        if self.domain is not None:
-            self.cmd('virsh destroy {0}'.format(self.vm.name))
-            self.domain.undefine()
-            self.domain.destroy()
-            time.sleep(2)
-
         if self.vm.snapshotted:
             self.vm.revert()
 
@@ -150,7 +117,16 @@ class LXCManager(VMManager):
             return False
 
     def start(self):
-        pass
+        create_cmd = 'lxc-start -n {0} -d'.format(self.vm.name)
+        self.cmd(create_cmd)
+        for line in self.lxc_start('-n', self.vm.name, '-d'):
+            self.out(line)
+
+    def stop(self):
+        create_cmd = 'lxc-stop -n {0}'.format(self.vm.name)
+        self.cmd(create_cmd)
+        for line in self.lxc_stop('-n', self.vm.name):
+            self.out(line)
 
     def run_command(self, command, cwd=None):
         self.aggregated = ''
@@ -200,6 +176,9 @@ class LXCManager(VMManager):
             self.last_output = self.aggregated
 
     def snapshot(self):
+        if self.vm.running:
+            raise RuntimeError("You can't create a snapshot of a running VM. Call stop() first.")
+
         snapshot_cmd = 'lxc-backup {0} 1'.format(self.vm.name)
         self.cmd(snapshot_cmd)
 
@@ -209,6 +188,9 @@ class LXCManager(VMManager):
         self.vm.snapshotted = True
 
     def revert(self):
+        if self.vm.running:
+            raise RuntimeError("You can't revert to a snapshot of a running VM. Call stop() first.")
+
         revert_cmd = 'lxc-restore {0} 0'.format(self.vm.name)
         self.cmd(revert_cmd)
 

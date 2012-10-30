@@ -16,6 +16,7 @@ class VirtualMachine:
         self.cpu_mask = cpu_mask
         self.ram = ram
         self.disk_size = disk_size
+        self.running = False
 
         self.name = name
 
@@ -61,7 +62,11 @@ class VirtualMachine:
     def start(self):
         self.manager.start()
         self.manager.wait()
-        self.manager.set_cpu_count()
+        self.running = True
+
+    def stop(self):
+        self.manager.stop()
+        self.running = False
 
     def create(self):
         self.manager.create()

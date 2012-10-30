@@ -1,3 +1,4 @@
 prune dist
 prune build
 recursive-include deego *.xml
+recursive-include deego *.conf

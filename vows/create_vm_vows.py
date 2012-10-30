@@ -17,7 +17,6 @@ class CreateVMVows(Vows.Context):
 
     def topic(self):
         return VM.create(
-            cpu_count=2,
             cpu_mask="13",
             ram=512, #MB
             disk_size=8000 #MB
@@ -35,7 +34,7 @@ class CreateVMVows(Vows.Context):
             return vm
 
         def should_have_expected_ip(self, topic):
-            expect(topic.ip).to_include(EXPECTED_IP)
+            expect(topic.ip).not_to_be_null()
 
         class CanRunCommand(Vows.Context):
             def topic(self, vm):
@@ -56,9 +55,14 @@ class CreateVMVows(Vows.Context):
 
         class WhenSnapshottedAndReverted(Vows.Context):
             def topic(self, vm):
+                import ipdb;ipdb.set_trace()
+                vm.stop()
                 vm.snapshot()
+                vm.start()
                 vm.run_command('echo "test" > ~/test.txt')
+                vm.stop()
                 vm.revert()
+                vm.start()
                 return vm
 
             class FileIsNotThere(Vows.Context):
