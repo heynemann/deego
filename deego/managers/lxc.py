@@ -77,8 +77,8 @@ class LXCManager(VMManager):
         arguments.append('-f')
         arguments.append(conf_path)
 
-        arguments.append('--fssize')
-        arguments.append('{0}G'.format(self.vm.disk_size / 1024 / 1024))
+        #arguments.append('--fssize')
+        #arguments.append('{0}G'.format(self.vm.disk_size / 1024 / 1024))
 
         create_cmd = 'lxc-create {0}'.format(' '.join(arguments))
         self.cmd(create_cmd)
