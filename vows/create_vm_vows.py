@@ -17,7 +17,7 @@ class CreateVMVows(Vows.Context):
 
     def topic(self):
         return VM.create(
-            cpu_mask="13",
+            cpu_mask="01",
             ram=512, #MB
             disk_size=8000 #MB
         )
